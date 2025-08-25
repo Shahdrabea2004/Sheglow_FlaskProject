@@ -11,6 +11,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from sqlalchemy import func
+import random, string
 app = Flask(__name__)
 
 app.config['SECRET_KEY']='your secret key'
@@ -164,12 +165,12 @@ class RegisterForm(FlaskForm):
     ])
     confirm_password = PasswordField('Confirm Password', [
         InputRequired(),
-        EqualTo('password', message="Passwords must match.")
+        #EqualTo('password', message="Passwords must match.")
     ])
     address = StringField('Address', [InputRequired()])
     phone_number = StringField('Phone Number', [
         InputRequired(),
-        Regexp(r'^\+?\d{1,15}$', message="Please enter a valid phone number.")
+        Regexp(r'^\d{11}$', message="Phone number must be exactly 11 digits.")
     ])
     submit = SubmitField('Register')
 
@@ -189,16 +190,15 @@ class ProductForm(FlaskForm):
 class OrderDetails(db.Model):
     __tablename__ = 'OrderDetails'
 
-    detail_ID = db.Column(db.Integer, primary_key=True)  # Unique ID for each order detail record
-    order_ID = db.Column(db.Integer, db.ForeignKey('orders.order_ID'), nullable=False)  # Foreign key to Orders table
-    product_id = db.Column(db.Integer, db.ForeignKey('Product.ProductID'), nullable=False)  # Foreign key to Product table
-    product_Quantity = db.Column(db.Integer, nullable=False)  # Quantity of the product ordered
-    Price = db.Column(db.Numeric(10, 2), nullable=False)  # Price of the product at the time of the order
-    phone = db.Column(db.String(15))  # Phone number for the order (optional)
-    address = db.Column(db.String(255))  # Shipping address for the order (optional)
-    name = db.Column(db.String(100))  # Name of the product (redundant but can be useful for display)
+    detail_ID = db.Column(db.Integer, primary_key=True)  
+    order_ID = db.Column(db.Integer, db.ForeignKey('orders.order_ID'), nullable=False)  
+    product_id = db.Column(db.Integer, db.ForeignKey('Product.ProductID'), nullable=False) 
+    product_Quantity = db.Column(db.Integer, nullable=False)  
+    Price = db.Column(db.Numeric(10, 2), nullable=False) 
+    phone = db.Column(db.String(15))  
+    address = db.Column(db.String(255)) 
+    name = db.Column(db.String(100)) 
 
-    # Relationships to other tables
     order = relationship('Order', back_populates='order_details')
     product = relationship('Product', back_populates='order_details')
 
@@ -300,7 +300,7 @@ def products_by_category(product_cat):
     category_products = query.all()
     return render_template('makeup.html', products=category_products, category=product_cat, sort_by=sort_by, order=order)
 
-#manar
+
 @app.before_request
 def check_session_expiration():
   
@@ -379,10 +379,9 @@ def create():
     if form.validate_on_submit():
         
         if form.password.data != form.confirm_password.data:
-            flash('Passwords do not match, please try again.', 'error')
+            flash("Passwords do not match, please try again.", "error")
             return redirect(url_for('create'))
 
-        
         new_client = Client(
             first_name=form.first_name.data,
             second_name=form.second_name.data,
@@ -394,7 +393,7 @@ def create():
         db.session.add(new_client)
         db.session.commit()
         flash('Registration successful!', 'success')
-        return redirect(url_for('home'))
+        return redirect(url_for('login'))
 
     return render_template('create.html', form=form)
 
@@ -419,7 +418,7 @@ def show_products():
 
     return render_template( 'product.html', products=products, sort_by=sort_by, order=order, wishlist=wishlist)
 
-#sama
+
 @app.route('/product/<int:product_id>', methods=['GET', 'POST'])
 def product_details(product_id):
     product = Product.query.get_or_404(product_id)
@@ -477,7 +476,7 @@ def product_details(product_id):
         recently_viewed=products,
     )
 
-#manar
+
 @app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('q', '')  
@@ -502,7 +501,7 @@ def search_suggestions():
     return jsonify(suggestions)
 
 
-#menna
+
 @app.route('/update_orders', methods=['GET'])
 def update_orders():
     try:
@@ -558,43 +557,44 @@ def request_return_or_exchange():
     try:
         email = request.form.get('email')
         if not email:
-            return jsonify({"message": "Email is required"}), 400
+            flash("Email is required!", "error")
+            return redirect(url_for('home'))  
 
-        
+        tracking_number = "SHEGLOW-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
         sender_email = "menoemail305@gmail.com"
         sender_password = "pybr sgfm cdqc wlme"
         subject = "Return or Exchange Request Confirmation"
-        
-       
-        body = """\
+
+        body = f"""\
         <html>
             <body>
                 <p>Dear Customer,</p>
-                <p>Thank you for reaching out to us. We have received your request for a return or exchange. Our representative will contact you shortly to assist you with the process.</p>
+                <p>Thank you for reaching out to us. We have received your request.</p>
+                <p>Your tracking number is: <b>{tracking_number}</b></p>
                 <p>Best regards,<br>
                 <span style="color:black; font-weight:bold;">SHE</span><span style="color:#D91656; font-weight:bold;">GLOW</span> Team</p>
             </body>
         </html>
         """
 
-        
         msg = MIMEMultipart()
         msg['From'] = sender_email
         msg['To'] = email
         msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'html'))  
+        msg.attach(MIMEText(body, 'html'))
 
-     
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, email, msg.as_string())
 
-        return jsonify({"message": "Email sent successfully!"}), 200
+        flash(f"✅ Email sent successfully! Your tracking number is {tracking_number}", "success")
+        return redirect(url_for('refund'))
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        flash(f"❌ Error: {str(e)}", "error")
+        return redirect(url_for('refund'))
     
 @app.route('/refund-policy')
 def refund():
@@ -607,7 +607,7 @@ def privacy():
     return render_template('privacy-policy.html')
 
 
-#manar
+
 @app.route('/wishlist/toggle/<int:product_id>', methods=['POST'])
 def toggle_wishlist(product_id):
     if 'client_id' not in session:
@@ -615,7 +615,7 @@ def toggle_wishlist(product_id):
 
     client_id = session['client_id']
 
-    # Check if the product is already in the wishlist
+   
     existing_item = Wishlist.query.filter_by(client_id=client_id, product_id=product_id).first()
     if existing_item:
         db.session.delete(existing_item)
@@ -638,7 +638,7 @@ def wishlist():
     return render_template('wishlist.html', wishlist_items=wishlist_items)
 
 
-#rana
+
 
 @app.route('/dashboard')
 def dashboard():

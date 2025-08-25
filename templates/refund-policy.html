@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="{{ url_for('static', filename='images/icon.png') }}"/>
@@ -205,4 +206,18 @@
         </section>
     </main>
 </body>
+ {% with messages = get_flashed_messages(with_categories=true) %}
+ {% if messages %}
+     {% for category, message in messages %}
+         <script>
+             Swal.fire({
+                 icon: "{{ 'success' if category == 'success' else 'error' }}",
+                 title: "{{ message }}",
+                 showConfirmButton: true,
+                 timer: 5000
+             });
+         </script>
+     {% endfor %}
+ {% endif %}
+ {% endwith %}
 </html>
