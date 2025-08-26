@@ -80,7 +80,7 @@ class Product(db.Model):
         self.StockQuantity = StockQuantity
         self.category = category
         self.Brand = Brand
-        self.Rating = rating
+        self.rating = rating  
         self.admin_id =admin_id
         self.PhotoPath = PhotoPath
     def __repr__(self):
@@ -481,7 +481,6 @@ def product_details(product_id):
 def search():
     query = request.args.get('q', '')  
     if query:
-
         results = Product.query.filter(Product.ProductName.ilike(f'%{query}%')).all()
     else:
         results = [] 
@@ -550,8 +549,7 @@ def track_order(order_id):
 @app.route('/order-tracking', methods=['GET'])
 def track_order_page():
     return render_template('order-tracking.html')
-
-
+    
 @app.route('/request_return_or_exchange', methods=['POST'])
 def request_return_or_exchange():
     try:
@@ -559,8 +557,6 @@ def request_return_or_exchange():
         if not email:
             flash("Email is required!", "error")
             return redirect(url_for('home'))  
-
-        tracking_number = "SHEGLOW-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
         sender_email = "menoemail305@gmail.com"
         sender_password = "pybr sgfm cdqc wlme"
@@ -571,7 +567,7 @@ def request_return_or_exchange():
             <body>
                 <p>Dear Customer,</p>
                 <p>Thank you for reaching out to us. We have received your request.</p>
-                <p>Your tracking number is: <b>{tracking_number}</b></p>
+                <p>We will contact you soon regarding your return or exchange.</p>
                 <p>Best regards,<br>
                 <span style="color:black; font-weight:bold;">SHE</span><span style="color:#D91656; font-weight:bold;">GLOW</span> Team</p>
             </body>
@@ -589,13 +585,14 @@ def request_return_or_exchange():
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, email, msg.as_string())
 
-        flash(f"✅ Email sent successfully! Your tracking number is {tracking_number}", "success")
+        flash("Email sent successfully!", "success")
         return redirect(url_for('refund'))
 
     except Exception as e:
-        flash(f"❌ Error: {str(e)}", "error")
+        flash(f"Error: {str(e)}", "error")
         return redirect(url_for('refund'))
-    
+
+
 @app.route('/refund-policy')
 def refund():
     return render_template('refund-policy.html')
@@ -702,12 +699,11 @@ def update_address():
         return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
     
     
-#Shahd
+
 def get_cart(client_id):
     return CartItem.query.filter_by(client_id=client_id).all()
 
 
-# Routes
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):
     if 'client_id' not in session:
@@ -809,7 +805,7 @@ def clear_cart():
 
 
 
-#shahd part2
+
 @app.route('/checkout', methods=['GET'])
 def checkout():
     client_id = session['client_id']
@@ -845,7 +841,7 @@ def checkout():
         total_with_shipping=total_with_shipping
     )
 
-#shahd Part_3
+
 @app.route('/complete_order', methods=['POST','GET'])
 def complete_order():
     
